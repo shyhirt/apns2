@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -169,6 +170,8 @@ func (c *Client) PushWithContext(ctx Context, n *Notification) (*Response, error
 	}
 
 	url := c.Host + "/3/device/" + n.DeviceToken
+	log.Println("================>>>", http.MethodPost, url)
+	log.Println("=================>>>", string(payload))
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
 	if err != nil {
 		return nil, err
