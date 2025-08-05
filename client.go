@@ -164,39 +164,46 @@ func (c *Client) Push(n *Notification) (*Response, error) {
 // return a Response indicating whether the notification was accepted or
 // rejected by the APNs gateway, or an error if something goes wrong.
 func (c *Client) PushWithContext(ctx Context, n *Notification) (*Response, error) {
-	payload, err := json.Marshal(n)
-	if err != nil {
-		return nil, err
-	}
-
-	url := c.Host + "/3/device/" + n.DeviceToken
-	log.Println("================>>>", http.MethodPost, url)
-	log.Println("=================>>>", string(payload))
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
-	if err != nil {
-		return nil, err
-	}
-
-	if c.Token != nil {
-		c.setTokenHeader(request)
-	}
-
-	setHeaders(request, n)
-
-	response, err := c.HTTPClient.Do(request)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-
 	r := &Response{}
-	r.StatusCode = response.StatusCode
-	r.ApnsID = response.Header.Get("apns-id")
-	r.ApnsUniqueID = response.Header.Get("apns-unique-id")
+	urls := []string{HostDevelopment, HostProduction}
+	for _, hst := range urls {
+		payload, err := json.Marshal(n)
+		if err != nil {
+			return nil, err
+		}
 
-	decoder := json.NewDecoder(response.Body)
-	if err := decoder.Decode(r); err != nil && err != io.EOF {
-		return &Response{}, err
+		url := hst + "/3/device/" + n.DeviceToken
+		log.Println("================>>>", http.MethodPost, url)
+		log.Println("=================>>>", string(payload))
+		request, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
+		if err != nil {
+			return nil, err
+		}
+
+		if c.Token != nil {
+			c.setTokenHeader(request)
+		}
+
+		setHeaders(request, n)
+
+		response, err := c.HTTPClient.Do(request)
+		if err != nil {
+			return nil, err
+		}
+
+		r.StatusCode = response.StatusCode
+		r.ApnsID = response.Header.Get("apns-id")
+		r.ApnsUniqueID = response.Header.Get("apns-unique-id")
+
+		decoder := json.NewDecoder(response.Body)
+		if err = decoder.Decode(r); err != nil && err != io.EOF {
+			return &Response{}, err
+		}
+		err = response.Body.Close()
+		if err != nil {
+			return nil, err
+		}
+		//return r, nil
 	}
 	return r, nil
 }
